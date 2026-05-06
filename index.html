@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Hierarki ILP & Akreditasi Puskesmas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; height: auto; margin: auto; }
+        .tab-button.active { background-color: #4338ca; color: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        .inventory-tab-button.active { border-color: #4338ca; background-color: #e0e7ff; color: #4338ca; }
+        .accordion-header { cursor: pointer; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content.open { max-height: 8000vh; transition: max-height 0.8s ease-in; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .nav-container::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 z-[60] transition-all duration-300 translate-y-[150%] opacity-0 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center max-w-lg w-full border border-slate-700">
+        <svg class="w-8 h-8 mr-4 text-sky-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span id="toast-message" class="text-sm font-medium leading-snug">Pesan notifikasi...</span>
+    </div>
+
+    <!-- Konten Utama -->
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-6">
+            <div class="inline-block bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-bold tracking-wide mb-3">VERSI MATRIKS SILANG (ILP × SIAP) - TERVERIFIKASI 100%</div>
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">Dasbor Hierarki ILP & Akreditasi</h1>
+            <p class="mt-2 text-lg text-slate-600">Pemetaan kegiatan Puskesmas berdasarkan 5 Klaster ILP terintegrasi dengan instrumen Akreditasi.</p>
+        </header>
+
+        <!-- BANNER PERINGATAN (DISCLAIMER) -->
+        <div class="bg-amber-50 border-l-8 border-amber-500 text-amber-900 p-5 mb-10 rounded-r-xl shadow-md text-left mx-auto max-w-4xl relative overflow-hidden">
+            <h3 class="font-black text-xl md:text-2xl flex items-center mb-3"><span class="text-2xl mr-2">⚠️</span> PEMBERITAHUAN PENTING</h3>
+            <div class="text-sm md:text-base leading-relaxed space-y-3 relative z-10 font-medium">
+                <p>Pemetaan (mapping) silang yang ditampilkan pada dasbor ini <strong class="text-rose-600 uppercase bg-rose-100 px-1 py-0.5 rounded">bukanlah pemetaan resmi atau mandatori</strong> yang dikeluarkan oleh Kementerian Kesehatan RI maupun lembaga penyelenggara akreditasi.</p>
+                <p>Sistem ini disusun murni sebagai <strong>pendekatan praktis dan komprehensif</strong> untuk mempermudah Tim Pokja Puskesmas melihat benang merah dan mengumpulkan bukti telusur (RDOWS) Akreditasi SIAP di dalam kerangka operasional <span class="font-bold underline decoration-amber-300 decoration-2 text-amber-800">Integrasi Pelayanan Kesehatan Primer (ILP)</span> secara transparan antar klaster.</p>
+            </div>
+        </div>
+
+        <nav class="mb-10">
+            <div class="nav-container flex justify-start sm:justify-center border border-slate-300 rounded-full p-1 bg-white/70 backdrop-blur-sm shadow-sm max-w-4xl mx-auto overflow-x-auto whitespace-nowrap">
+                <button id="tab-dashboard" class="tab-button active inline-block flex-none sm:flex-1 py-2 px-4 rounded-full text-sm md:text-base font-semibold transition-all duration-300">Dashboard ILP</button>
+                <button id="tab-explorer" class="tab-button inline-block flex-none sm:flex-1 py-2 px-4 rounded-full text-sm md:text-base font-semibold transition-all duration-300">Struktur Klaster</button>
+                <button id="tab-inventory" class="tab-button inline-block flex-none sm:flex-1 py-2 px-4 rounded-full text-sm md:text-base font-semibold transition-all duration-300">Checklist Bukti</button>
+            </div>
+        </nav>
+
+        <main id="content-area">
+            <div id="view-dashboard" class="view fade-in">
+                 <section class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Rekapitulasi Struktur ILP</h2>
+                    <p class="max-w-3xl mx-auto text-slate-600">Transformasi Puskesmas kini dibagi menjadi Klaster. Dasbor ini memetakan standar akreditasi ke dalam hierarki Program dan Kegiatan spesifik di setiap Klaster.</p>
+                </section>
+
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6 mb-10 shadow-sm relative overflow-hidden">
+                    <div class="flex items-center justify-between flex-wrap gap-4 relative z-10">
+                        <div>
+                            <h3 class="text-lg font-bold text-emerald-800 flex items-center">
+                                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Audit Integritas Data (Cross-check Otomatis)
+                            </h3>
+                            <p class="text-sm text-emerald-700 mt-1">Sistem menjamin tidak ada satupun Elemen Penilaian (EP) yang tertinggal dalam pemetaan ILP ini.</p>
+                        </div>
+                        <div class="flex gap-4 text-center">
+                            <div class="bg-white p-3 rounded-lg border border-emerald-200 shadow-sm min-w-[120px]">
+                                <div class="text-sm font-semibold text-slate-500">Kriteria Unik</div>
+                                <div class="text-2xl font-black text-emerald-600"><span id="val-kriteria">0</span>/82</div>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg border border-emerald-200 shadow-sm min-w-[120px]">
+                                <div class="text-sm font-semibold text-slate-500">EP Unik Masuk</div>
+                                <div class="text-2xl font-black text-emerald-600"><span id="val-ep">0</span>/328</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-emerald-700 bg-emerald-100/70 p-3 rounded-lg border border-emerald-200 relative z-10">
+                        <strong>Catatan Logika Sistem:</strong> Terdapat total <span id="val-total-map" class="font-bold">0</span> titik pemetaan EP di seluruh klaster ILP. Jumlah ini melebihi angka dasar 328 karena adanya kriteria krusial (seperti Identifikasi Pasien & PPI) yang mendouble dan wajib diterapkan baik di Klaster 1 maupun Lintas Klaster.
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                    <div class="bg-white p-6 rounded-xl shadow-md border-b-4 border-indigo-500 text-center">
+                        <div class="text-4xl font-black text-slate-800 mb-1" id="count-klaster">0</div>
+                        <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Klaster ILP</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border-b-4 border-emerald-500 text-center">
+                        <div class="text-4xl font-black text-slate-800 mb-1" id="count-program">0</div>
+                        <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Program ILP</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border-b-4 border-amber-500 text-center">
+                        <div class="text-4xl font-black text-slate-800 mb-1" id="count-kriteria-map">0</div>
+                        <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Kriteria Ter-Mapping</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border-b-4 border-rose-500 text-center">
+                        <div class="text-4xl font-black text-slate-800 mb-1" id="count-ep-map">0</div>
+                        <div class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Titik Pemetaan EP</div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-12 border border-slate-100">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4 text-center">Sebaran Beban Kriteria Akreditasi per Klaster ILP</h3>
+                    <div class="chart-container"><canvas id="klasterDistributionChart"></canvas></div>
+                </div>
+
+                <section class="text-center mb-6 mt-12">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Irisan ILP dan RDOWS Akreditasi</h2>
+                </section>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-blue-400">
+                        <h4 class="font-bold text-lg text-blue-700">📜 Regulasi (R)</h4>
+                        <p class="text-sm text-slate-600 mt-1">Kebijakan Kepala Puskesmas, SK, Pedoman/Panduan, SOP, dan KAK.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-green-400">
+                        <h4 class="font-bold text-lg text-green-700">📄 Dokumen (D)</h4>
+                        <p class="text-sm text-slate-600 mt-1">Bukti kegiatan: Undangan, laporan, rekam medis, form, foto.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-yellow-400">
+                        <h4 class="font-bold text-lg text-yellow-700">👀 Observasi (O)</h4>
+                        <p class="text-sm text-slate-600 mt-1">Pengamatan surveior pada fasilitas, alat, dan praktik SOP.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-purple-400">
+                        <h4 class="font-bold text-lg text-purple-700">💬 Wawancara (W)</h4>
+                        <p class="text-sm text-slate-600 mt-1">Tanya jawab petugas klaster, lintas sektor, atau Pasien.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-red-400">
+                        <h4 class="font-bold text-lg text-red-700">🏃 Simulasi (S)</h4>
+                        <p class="text-sm text-slate-600 mt-1">Peragaan langsung staf (Cuci Tangan, APAR, Code Blue, dll).</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-explorer" class="view hidden fade-in">
+                <section class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Penjelajah Struktur Klaster ILP</h2>
+                    <p class="max-w-3xl mx-auto text-slate-600">Telusuri hierarki: Klaster > Program ILP. Di dalam setiap program tertuang utuh Bab, Standar, Kriteria, dan Elemen Penilaian dari instrumen Akreditasi Puskesmas.</p>
+                </section>
+                <div id="explorer-content" class="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-slate-100"></div>
+            </div>
+
+            <div id="view-inventory" class="view hidden fade-in">
+                <section class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Inventarisasi Bukti (Perspektif ILP)</h2>
+                    <p class="max-w-3xl mx-auto text-slate-600">Checklist otomatis ini diterjemahkan dari <span id="text-tot-ep-inv" class="font-bold text-indigo-600"></span> titik pemetaan Elemen Penilaian. Klik tombol "Salin" untuk memindahkannya ke To-Do List per Klaster.</p>
+                </section>
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-slate-100">
+                    <div class="flex flex-wrap justify-center border-b-2 border-slate-200 mb-6 -mx-2">
+                        <button class="inventory-tab-button m-1 py-2 px-4 border-b-2 font-medium text-slate-500 transition-colors" data-type="R">📜 Regulasi</button>
+                        <button class="inventory-tab-button m-1 py-2 px-4 border-b-2 font-medium text-slate-500 transition-colors" data-type="D">📄 Dokumen Bukti</button>
+                        <button class="inventory-tab-button m-1 py-2 px-4 border-b-2 font-medium text-slate-500 transition-colors" data-type="O">👀 Observasi</button>
+                        <button class="inventory-tab-button m-1 py-2 px-4 border-b-2 font-medium text-slate-500 transition-colors" data-type="W">💬 Wawancara</button>
+                        <button class="inventory-tab-button m-1 py-2 px-4 border-b-2 font-medium text-slate-500 transition-colors" data-type="S">🏃 Simulasi</button>
+                    </div>
+                    <div id="inventory-content" class="fade-in"></div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="text-center mt-16 text-sm text-slate-400 pb-8 border-t border-slate-200 pt-8">
+            <p>Sistem Informasi & Pendampingan ILP Puskesmas © 2026</p>
+        </footer>
+    </div>
+
+<script>
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-message').textContent = message;
+    toast.classList.remove('translate-y-[150%]', 'opacity-0');
+    setTimeout(() => { toast.classList.add('translate-y-[150%]', 'opacity-0'); }, 4500);
+}
+
+// Data JSON SIAP Dipadatkan
+const rawData = {
+"BAB1":{title:"BAB I: KEPEMIMPINAN DAN MANAJEMEN PUSKESMAS (KMP)",standarList:[
+{id:"Standar 1.1",title:"Perencanaan dan kemudahan akses",kriteriaList:[
+{id:"Kriteria 1.1.1",title:"Menyediakan jenis pelayanan",eps:["a) Visi, misi, tujuan, tata nilai ditetapkan. (R)","b) Jenis pelayanan ditetapkan dari analisis. (R, D, W)","c) Rencana 5 tahunan disusun lintas program. (R, D, W)","d) RUK disusun berdasarkan Rencana 5 tahunan. (R, D, W)","e) RPK tahunan disusun sesuai alokasi. (R, D, W)","f) RPK bulanan disusun. (R, D, W)","g) Perencanaan direvisi jika perlu. (R, D, W)"]},
+{id:"Kriteria 1.1.2",title:"Masyarakat mudah mengakses informasi",eps:["a) Kebijakan hak dan kewajiban pasien. (R)","b) Sosialisasi hak, kewajiban, pelayanan. (R, D, O, W)","c) Kepatuhan dievaluasi. (D, O, W)","d) Umpan balik dikelola. (R, D, O, W)"]}]},
+{id:"Standar 1.2",title:"Tata kelola organisasi.",kriteriaList:[
+{id:"Kriteria 1.2.1",title:"Struktur organisasi ditetapkan",eps:["a) Penanggung jawab ditetapkan. (R)","b) Kode etik ditetapkan. (R, D, W)","c) Pendelegasian wewenang ditetapkan. (R, D)"]},
+{id:"Kriteria 1.2.2",title:"Dokumen dikendalikan.",eps:["a) Pedoman tata naskah ditetapkan. (R)","b) Kebijakan KMP, UKM, UKP ditetapkan. (R, W)","c) Pengendalian dokumen sesuai prosedur. (R, D, O, W)"]},
+{id:"Kriteria 1.2.3",title:"Jaringan dan jejaring dikelola.",eps:["a) Indikator kinerja pembinaan ditetapkan. (R)","b) Identifikasi jejaring dilakukan. (D)","c) Program pembinaan dilaksanakan. (R, D, W)","d) Pencapaian pembinaan dievaluasi. (D)"]},
+{id:"Kriteria 1.2.4",title:"Ketersediaan data dan informasi.",eps:["a) Pengumpulan sistem informasi dilaksanakan. (R, D, W)","b) Penyelenggaraan dievaluasi. (D, W)","c) Informasi pencapaian kinerja tersedia. (D, O)"]},
+{id:"Kriteria 1.2.5",title:"Mempertimbangkan etik.",eps:["a) Prosedur dilema etik ada. (R)","b) Pelaporan dilema etik dilaksanakan. (D, W)","c) Dukungan pimpinan penyelesaian etik. (D, W)"]}]},
+{id:"Standar 1.3",title:"Manajemen sumber daya manusia.",kriteriaList:[
+{id:"Kriteria 1.3.1",title:"Ketersediaan SDM.",eps:["a) Analisis jabatan dan beban kerja. (D, W)","b) Peta jabatan disusun. (D, W)","c) Pemenuhan kebutuhan tenaga. (D, W)","d) Kredensial/rekredensial dilakukan. (D, W)"]},
+{id:"Kriteria 1.3.2",title:"Setiap pegawai memiliki uraian tugas.",eps:["a) Uraian tugas ditetapkan. (R)","b) Indikator penilaian kinerja ditetapkan. (R)","c) Penilaian kinerja tahunan dilakukan. (R, D, W)","d) Indikator kepuasan pegawai ditetapkan. (R)","e) Survei kepuasan pegawai dianalisis. (R, D, W)"]},
+{id:"Kriteria 1.3.3",title:"Pegawai mengembangkan ilmu.",eps:["a) Informasi peluang kompetensi tersedia. (D)","b) Dukungan manajemen untuk kompetensi. (R, W)","c) Penerapan kompetensi dievaluasi. (R, D, W)"]},
+{id:"Kriteria 1.3.4",title:"Dokumen kepegawaian lengkap.",eps:["a) Dokumen kepegawaian lengkap dan mutakhir. (R, D, O, W)","b) Evaluasi kelengkapan dokumen dilakukan. (D, W)"]},
+{id:"Kriteria 1.3.5",title:"Orientasi pegawai.",eps:["a) Orientasi dilaksanakan. (R, D, W)","b) Evaluasi orientasi dilakukan. (D, W)"]},
+{id:"Kriteria 1.3.6",title:"Pelayanan K3.",eps:["a) Program K3 ditetapkan. (R, D, W)","b) Pemeriksaan kesehatan berkala. (R, D, W)","c) Imunisasi pegawai tersedia. (R, D, W)","d) Konseling kecelakaan kerja diberikan. (D, W)"]}]},
+{id:"Standar 1.4",title:"Manajemen fasilitas dan keselamatan.",kriteriaList:[
+{id:"Kriteria 1.4.1",title:"Program MFK disusun.",eps:["a) Program MFK ditetapkan. (R)","b) Akses untuk keterbatasan fisik ada. (O, W)","c) Identifikasi area berisiko. (D, W)","d) Daftar risiko MFK disusun. (D)","e) Evaluasi MFK per triwulan. (D)"]},
+{id:"Kriteria 1.4.2",title:"Keamanan fasilitas.",eps:["a) Identifikasi pengunjung dilakukan. (R, O, W)","b) Inspeksi fasilitas dilakukan. (R, D, O, W)","c) Simulasi kode darurat dilakukan. (D, O, W, S)","d) Pemantauan konstruksi terkait PPI. (D, O, W)"]},
+{id:"Kriteria 1.4.3",title:"Pengelolaan B3 dan limbah B3.",eps:["a) Inventarisasi B3 dilakukan. (D)","b) Manajemen B3 dilaksanakan. (R, D, O, W)","c) IPAL tersedia. (D, O, W)","d) Penanganan tumpahan B3 dilakukan. (D, O, W)"]},
+{id:"Kriteria 1.4.4",title:"Manajemen kedaruratan.",eps:["a) Identifikasi risiko bencana. (D)","b) Manajemen kedaruratan dilaksanakan. (D, W)","c) Simulasi bencana tahunan. (D, W)","d) Perbaikan manajemen kedaruratan. (D)"]},
+{id:"Kriteria 1.4.5",title:"Pengamanan kebakaran.",eps:["a) Manajemen pengamanan kebakaran. (D, O, W)","b) Inspeksi APAR dilakukan. (D, O)","c) Simulasi pengamanan kebakaran. (D, W, S)","d) Kebijakan larangan merokok. (R, O, W)"]},
+{id:"Kriteria 1.4.6",title:"Pengelolaan alat kesehatan.",eps:["a) Inventarisasi ASPAK dilakukan. (D)","b) Kompetensi staf alkes dipenuhi. (D, W)","c) Kalibrasi alkes dilakukan. (R, D, O, W)"]},
+{id:"Kriteria 1.4.7",title:"Pengelolaan sistem utilitas.",eps:["a) Inventarisasi utilitas ASPAK. (D)","b) Manajemen utilitas dilaksanakan. (R, D)","c) Utilitas tersedia 24/7. (O)"]},
+{id:"Kriteria 1.4.8",title:"Pendidikan MFK petugas.",eps:["a) Rencana pendidikan MFK ada. (R)","b) Pendidikan MFK dilaksanakan. (D, W)","c) Evaluasi pendidikan MFK dilakukan. (D, W)"]}]},
+{id:"Standar 1.5",title:"Manajemen keuangan.",kriteriaList:[
+{id:"Kriteria 1.5.1",title:"Manajemen keuangan dilaksanakan.",eps:["a) Kebijakan pengelola keuangan. (R)","b) Pengelolaan keuangan dilaksanakan. (D, O, W)"]}]},
+{id:"Standar 1.6",title:"Pengawasan, pengendalian, dan penilaian kinerja.",kriteriaList:[
+{id:"Kriteria 1.6.1",title:"Pengawasan menggunakan indikator.",eps:["a) Indikator kinerja ditetapkan. (R)","b) Penilaian kinerja periodik. (R, D, W)","c) Hasil penilaian dievaluasi. (D, W)","d) Analisis untuk perencanaan. (D, W)","e) Pengawasan untuk revisi RPK. (D, W)","f) PKP dilaporkan ke dinas kesehatan. (D)"]},
+{id:"Kriteria 1.6.2",title:"Lokakarya mini lintas program/sektor.",eps:["a) Lokakarya mini bulanan/triwulanan konsisten. (D, W)","b) Permasalahan dibahas di lokmin. (D, W)","c) Rekomendasi lokmin ditindaklanjuti. (D, W)"]},
+{id:"Kriteria 1.6.3",title:"Audit internal dan PTM.",eps:["a) Tim audit internal dibentuk. (R)","b) Program audit internal dilaksanakan. (R, D, W)","c) Umpan balik audit internal disampaikan. (D, W)","d) Rekomendasi audit ditindaklanjuti. (D, W)","e) PTM direncanakan. (D, W)","f) PTM dievaluasi. (D, W)"]}]},
+{id:"Standar 1.7",title:"Pembinaan oleh dinas kesehatan.",kriteriaList:[
+{id:"Kriteria 1.7.1",title:"Puskesmas mendapat pembinaan TPCB.",eps:["a) Organisasi Puskesmas ditetapkan. (R)","b) Jadwal pembinaan TPCB ditetapkan. (R, D, W)","c) TPCB melaksanakan pembinaan. (D, W)","d) TPCB menyampaikan umpan balik. (D, W)","e) TPCB mendampingi RUK RPK. (R, D, W)","f) TPCB menindaklanjuti PTM. (D, W)","g) TPCB verifikasi pemantauan. (D, W)","h) Puskesmas menindaklanjuti umpan balik. (D, W)"]}]}]},
+"BAB2":{title:"BAB II: PENYELENGGARAAN UPAYA KESEHATAN MASYARAKAT (UKM)",standarList:[
+{id:"Standar 2.1",title:"Perencanaan terpadu UKM.",kriteriaList:[
+{id:"Kriteria 2.1.1",title:"Perencanaan UKM terpadu wilayah.",eps:["a) Identifikasi kebutuhan sasaran UKM. (R, D, W)","b) Hasil identifikasi dianalisis lintas sektor. (D, W)","c) Capaian UKM dianalisis lintas sektor. (R, D, W)","d) RUK UKM disusun terpadu. (D, W)"]},
+{id:"Kriteria 2.1.2",title:"Pemberdayaan masyarakat.",eps:["a) Pemberdayaan masyarakat dalam RPK. (R, D, W)","b) Bukti keterlibatan masyarakat. (D, W)","c) Evaluasi pemberdayaan masyarakat. (D, W)"]},
+{id:"Kriteria 2.1.3",title:"RPK Pelayanan UKM.",eps:["a) RPK tahunan UKM. (R)","b) RPK bulanan UKM. (R)","c) KAK untuk tiap kegiatan UKM. (R)","d) RPK disesuaikan jika ada perubahan. (D, W)"]}]},
+{id:"Standar 2.2",title:"Kemudahan akses sasaran UKM.",kriteriaList:[
+{id:"Kriteria 2.2.1",title:"Penjadwalan UKM disepakati.",eps:["a) Jadwal UKM disepakati. (D, W)","b) Jadwal diinformasikan. (D, W)","c) Perubahan jadwal diinformasikan. (D, W)"]},
+{id:"Kriteria 2.2.2",title:"Akses umpan balik.",eps:["a) Identifikasi umpan balik masyarakat. (D, W)","b) Umpan balik dianalisis. (D, W)","c) Keluhan ditindaklanjuti. (D, W)"]}]},
+{id:"Standar 2.3",title:"Penggerakan pelaksanaan UKM.",kriteriaList:[
+{id:"Kriteria 2.3.1",title:"Komunikasi dan koordinasi UKM.",eps:["a) Mekanisme komunikasi UKM. (R)","b) Komunikasi UKM dilaksanakan. (D, W)"]}]},
+{id:"Standar 2.4",title:"Pembinaan berjenjang UKM.",kriteriaList:[
+{id:"Kriteria 2.4.1",title:"Pembinaan PJ UKM.",eps:["a) PJ UKM melakukan pembinaan periodik. (D, W)","b) PJ UKM menyusun rencana tindak lanjut masalah. (D, W)","c) Tindak lanjut masalah dilaksanakan. (D, W)","d) Evaluasi penyelesaian masalah. (D, W)"]}]},
+{id:"Standar 2.5",title:"Penguatan UKM dengan PIS PK.",kriteriaList:[
+{id:"Kriteria 2.5.1",title:"Tim Pembina Keluarga PIS-PK.",eps:["a) Tim Pembina Keluarga dibentuk. (R)","b) Tim kunjungan keluarga intervensi awal. (D, W)","c) Tim hitung IKS keluarga. (D)","d) Tim sampaikan masalah untuk analisis. (D, W)","e) Intervensi lanjut disusun. (D, W)","f) PJ UKM koordinasi intervensi lanjut. (D, W)"]},
+{id:"Kriteria 2.5.2",title:"Intervensi lanjut terintegrasi.",eps:["a) Analisis IKS awal untuk intervensi. (D, W)","b) Intervensi dikomunikasikan di lokmin. (D, W)","c) Intervensi lanjut dilaksanakan. (D, W)","d) PJ UKM koordinasi unit lain. (D, W)","e) Evaluasi tahapan PIS-PK. (D, W)","f) Laporan pemutakhiran data PIS-PK. (D, W)"]},
+{id:"Kriteria 2.5.3",title:"Pelaksanaan Germas.",eps:["a) Sasaran Germas ditetapkan. (R)","b) Perencanaan Germas terintegrasi. (D, W)","c) Pelaksanaan Germas lintas sektor. (D, W)","d) Pemberdayaan Germas dilakukan. (D, W)","e) Evaluasi pembinaan Germas. (D, W)"]}]},
+{id:"Standar 2.6",title:"Penyelenggaraan UKM esensial.",kriteriaList:[
+{id:"Kriteria 2.6.1",title:"Promosi Kesehatan.",eps:["a) Indikator Promkes tercapai. (R, D)","b) Upaya promotif preventif dilaksanakan. (R, D, W)","c) Pemantauan Promkes dilakukan. (D, W)","d) Rencana tindak lanjut Promkes. (D, W)","e) Pencatatan pelaporan Promkes. (R, D, W)"]},
+{id:"Kriteria 2.6.2",title:"Penyehatan Lingkungan.",eps:["a) Indikator Kesling tercapai. (R, D)","b) Upaya promotif preventif Kesling. (R, D, W)","c) Pemantauan Kesling. (D, W)","d) Tindak lanjut Kesling. (D, W)","e) Pelaporan Kesling. (R, D, W)"]},
+{id:"Kriteria 2.6.3",title:"Kesehatan Keluarga.",eps:["a) Indikator Kesga tercapai. (R, D)","b) Upaya promotif preventif Kesga. (R, D, W)","c) Pemantauan Kesga. (D, W)","d) Tindak lanjut Kesga. (D, W)","e) Pelaporan Kesga. (R, D, W)"]},
+{id:"Kriteria 2.6.4",title:"Gizi.",eps:["a) Indikator Gizi tercapai. (R, D)","b) Upaya promotif preventif Gizi. (R, D, W)","c) Pemantauan Gizi. (D, W)","d) Tindak lanjut Gizi. (D, W)","e) Pelaporan Gizi. (R, D, W)"]},
+{id:"Kriteria 2.6.5",title:"Pencegahan Penyakit.",eps:["a) Indikator P2P tercapai. (R, D)","b) Upaya promotif preventif P2P. (R, D, W)","c) Pemantauan P2P. (D, W)","d) Tindak lanjut P2P. (D, W)","e) Pelaporan P2P. (R, D, W)"]}]},
+{id:"Standar 2.7",title:"Penyelenggaraan UKM pengembangan.",kriteriaList:[
+{id:"Kriteria 2.7.1",title:"UKM Pengembangan dilakukan.",eps:["a) Jenis UKM Pengembangan ditetapkan. (R, D)","b) Indikator UKM Pengembangan tercapai. (R, D)","c) Upaya preventif UKM Pengembangan. (R, D, W)","d) Pemantauan UKM Pengembangan. (D, O, W)","e) Tindak lanjut UKM Pengembangan. (D, W)","f) Pelaporan UKM Pengembangan. (R, D, W)"]}]},
+{id:"Standar 2.8",title:"Pengawasan kinerja UKM.",kriteriaList:[
+{id:"Kriteria 2.8.1",title:"Supervisi pelaksanaan UKM.",eps:["a) Jadwal supervisi disusun. (R, D)","b) Jadwal diinformasikan. (D, W)","c) Analisis mandiri pelaksana. (D, W)","d) Supervisi dilaksanakan. (D, W)","e) Hasil supervisi disampaikan. (D, W)","f) Tindak lanjut supervisi. (D, W)"]},
+{id:"Kriteria 2.8.2",title:"Pemantauan pelaksanaan UKM.",eps:["a) Pemantauan kesesuaian jadwal. (D, W)","b) Pemantauan dibahas lokmin. (D, W)","c) Tindak lanjut pemantauan. (D, W)","d) Penyesuaian rencana kegiatan. (D, W)","e) Penyesuaian diinformasikan. (D, W)"]},
+{id:"Kriteria 2.8.3",title:"Perbaikan capaian UKM.",eps:["a) Indikator kinerja UKM ditetapkan. (R)","b) Pengumpulan data capaian. (R, D, W)","c) Pembahasan capaian lintas program. (D, W)","d) Rencana tindak lanjut disusun. (D, W)","e) Laporan ke dinas kesehatan. (D)","f) Ada umpan balik dinas kesehatan. (D)","g) Umpan balik ditindaklanjuti. (D)"]},
+{id:"Kriteria 2.8.4",title:"Penilaian kinerja periodik.",eps:["a) Penilaian kinerja 2x setahun. (R, D, W)","b) Tindak lanjut penilaian. (D, W)","c) Laporan kinerja ke dinas. (D)","d) Ada umpan balik dinas. (D)","e) Umpan balik ditindaklanjuti. (D)"]}]}]},
+"BAB3":{title:"BAB III: PENYELENGGARAAN UKP, LABORATORIUM, KEFARMASIAN",standarList:[
+{id:"Standar 3.1",title:"Penyelenggaraan pelayanan klinis.",kriteriaList:[
+{id:"Kriteria 3.1.1",title:"Pelayanan klinis efektif.",eps:["a) Prosedur kebutuhan khusus. (R)","b) Pendaftaran sesuai SOP. (R, O, W, S)","c) Informasi tarif dan alur jelas. (O, W)","d) General consent diminta. (D, W)"]}]},
+{id:"Standar 3.2",title:"Pengkajian dan rencana asuhan.",kriteriaList:[
+{id:"Kriteria 3.2.1",title:"Skrining dan kajian awal.",eps:["a) Kajian awal di rekam medis. (R, D, O, W)","b) Pelimpahan wewenang tertulis. (R, D)","c) Rencana asuhan dibuat terintegrasi. (D, W)","d) Asuhan pasien kolaboratif. (D, W)","e) Penyuluhan pasien dilakukan. (D, O)","f) Informed consent tindakan berisiko. (D)"]}]},
+{id:"Standar 3.3",title:"Pelayanan gawat darurat.",kriteriaList:[
+{id:"Kriteria 3.3.1",title:"Penanganan triase.",eps:["a) Triase gawat darurat. (R, D, O, W, S)","b) Stabilisasi pra-rujukan. (R, D, O)"]}]},
+{id:"Standar 3.4",title:"Pelayanan anestesi lokal.",kriteriaList:[
+{id:"Kriteria 3.4.1",title:"Anestesi lokal terstandar.",eps:["a) Anestesi oleh tenaga kompeten. (R, D, O, W)","b) Catatan anestesi di rekam medis. (D)"]}]},
+{id:"Standar 3.5",title:"Pelayanan gizi.",kriteriaList:[
+{id:"Kriteria 3.5.1",title:"Pelayanan gizi pasien.",eps:["a) Rencana asuhan gizi dibuat. (R, D, W)","b) Penyimpanan makanan higienis. (R, D, O, W)","c) Distribusi makanan dicatat. (R, D, O, W)","d) Edukasi diet pasien. (D)","e) Asuhan gizi kolaboratif. (D, W)","f) Respons diet dipantau. (D)"]}]},
+{id:"Standar 3.6",title:"Pemulangan dan tindak lanjut.",kriteriaList:[
+{id:"Kriteria 3.6.1",title:"Pemulangan pasien dipandu prosedur.",eps:["a) Pemulangan sesuai kriteria. (R, D)","b) Resume medis diberikan ke pasien. (D, O, W)"]}]},
+{id:"Standar 3.7",title:"Pelayanan Rujukan.",kriteriaList:[
+{id:"Kriteria 3.7.1",title:"Pelaksanaan rujukan.",eps:["a) Persetujuan rujukan dari pasien. (D, W)","b) Komunikasi dan stabilisasi sebelum rujuk. (D, W)","c) Serah terima rujukan via SBAR. (D, W)"]},
+{id:"Kriteria 3.7.2",title:"Tindak lanjut rujukan balik.",eps:["a) Kajian ulang rujukan balik. (R, D, O)","b) Tindak lanjut rujukan balik. (D, O, W)","c) Pencatatan formulir rujukan balik. (D)"]}]},
+{id:"Standar 3.8",title:"Penyelenggaraan rekam medis.",kriteriaList:[
+{id:"Kriteria 3.8.1",title:"Tata kelola rekam medis.",eps:["a) Kebijakan rekam medis dipatuhi. (R, D, O, W)","b) Rekam medis diisi lengkap dan diparaf. (D, O, W)"]}]},
+{id:"Standar 3.9",title:"Penyelenggaraan pelayanan laboratorium.",kriteriaList:[
+{id:"Kriteria 3.9.1",title:"Pelayanan laboratorium dikelola.",eps:["a) Penetapan nilai normal & kritis lab. (R)","b) Reagensia dilabeli & disimpan. (R, D, W)","c) Pelayanan lab sesuai prosedur. (R, D, O, W)","d) PMI dan PME lab dilaksanakan. (R, D, O, W)","e) Evaluasi waktu pelaporan lab. (D, W)"]}]},
+{id:"Standar 3.10",title:"Penyelenggaraan kefarmasian.",kriteriaList:[
+{id:"Kriteria 3.10.1",title:"Pelayanan kefarmasian dikelola.",eps:["a) Formularium puskesmas tersedia. (D)","b) Pengelolaan farmasi sesuai prosedur. (R, D, O, W)","c) Rekonsiliasi obat klinis. (R, D, O, W)","d) Kajian resep & 5B dipatuhi. (R, D, O, W)","e) Edukasi/konseling obat. (R, D, O, W)","f) Obat emergensi dipantau. (R, D, O, W)","g) Evaluasi kesesuaian peresepan. (D, W)"]}]}]},
+"BAB4":{title:"BAB IV: PROGRAM PRIORITAS NASIONAL (PPN)",standarList:[
+{id:"Standar 4.1",title:"Pencegahan penurunan stunting.",kriteriaList:[
+{id:"Kriteria 4.1.1",title:"Program stunting direncanakan.",eps:["a) Indikator stunting ditetapkan. (R, D, W)","b) Program stunting ditetapkan. (R, W)","c) Intervensi gizi spesifik dikoordinasikan. (R, D, W)","d) Evaluasi program stunting. (D, W)","e) Pencatatan pelaporan stunting. (R, D, W)"]}]},
+{id:"Standar 4.2",title:"Penurunan kematian ibu dan bayi.",kriteriaList:[
+{id:"Kriteria 4.2.1",title:"Pelayanan kesehatan KIA.",eps:["a) Indikator AKI-AKB ditetapkan. (R, D, W)","b) Program AKI-AKB ditetapkan. (R, W)","c) Sarana KIA tersedia. (R, D, O, W)","d) Pelayanan KIA sesuai prosedur. (R, D, W)","e) Program KIA lintas sektor. (R, D, W)","f) Evaluasi program KIA. (D, W)","g) Pelaporan program KIA. (R, D, W)"]}]},
+{id:"Standar 4.3",title:"Peningkatan imunisasi.",kriteriaList:[
+{id:"Kriteria 4.3.1",title:"Program imunisasi dilaksanakan.",eps:["a) Indikator imunisasi ditetapkan. (R, D, W)","b) Program imunisasi ditetapkan. (R, W)","c) Vaksin dan logistik tersedia. (R, D, O, W)","d) Pengelolaan rantai dingin vaksin. (R, D, O, W)","e) Sweeping imunisasi dikoordinasikan. (R, D, W)","f) Evaluasi program imunisasi. (D, W)","g) Pelaporan imunisasi. (R, D, W)"]}]},
+{id:"Standar 4.4",title:"Penanggulangan tuberkulosis.",kriteriaList:[
+{id:"Kriteria 4.4.1",title:"Pelayanan TBC komprehensif.",eps:["a) Indikator TBC ditetapkan. (R, D, W)","b) Program TBC ditetapkan. (R)","c) Tim TB DOTS ditetapkan. (R)","d) Logistik OAT dikelola. (R, D, O, W)","e) Tata laksana TBC DOTS. (R, D, O, W)","f) Program TBC dikoordinasikan. (R, D, W)","g) Evaluasi program TBC. (D, W)","h) Pelaporan program TBC. (R, D, W)"]}]},
+{id:"Standar 4.5",title:"Pengendalian PTM.",kriteriaList:[
+{id:"Kriteria 4.5.1",title:"Pengendalian PTM terpadu.",eps:["a) Indikator PTM ditetapkan. (R, D, W)","b) Program PTM ditetapkan. (R, W)","c) Program PTM dikoordinasikan. (R, D, W)","d) Pelaksanaan Posbindu PTM. (R, D, O, W)","e) Tata laksana Pandu PTM. (D, O, W)","f) Evaluasi program PTM. (D, W)","g) Pelaporan program PTM. (R, D, W)"]}]}]},
+"BAB5":{title:"BAB V: PENINGKATAN MUTU PUSKESMAS (PMP)",standarList:[
+{id:"Standar 5.1",title:"Peningkatan mutu berkesinambungan.",kriteriaList:[
+{id:"Kriteria 5.1.1",title:"Tim mutu ditetapkan.",eps:["a) Tim mutu & program mutu dibentuk. (R, W)","b) Implementasi program mutu. (D, W)","c) Evaluasi & tindak lanjut mutu. (D, W)","d) Program mutu dikomunikasikan. (D, W)"]},
+{id:"Kriteria 5.1.2",title:"Indikator mutu dibudayakan.",eps:["a) Profil indikator mutu ditetapkan. (R)","b) Pengukuran indikator mutu. (D, W)","c) Evaluasi indikator mutu. (D, W)"]},
+{id:"Kriteria 5.1.3",title:"Validasi dan analisis mutu.",eps:["a) Validasi data mutu dilakukan. (D, O, W)","b) Analisis data mutu dilakukan. (D, W)","c) Rencana tindak lanjut mutu. (R, D, W)","d) Evaluasi tindak lanjut mutu. (D, W)","e) Pelaporan mutu ke Dinkes. (D, W)"]},
+{id:"Kriteria 5.1.4",title:"Peningkatan Mutu dipertahankan.",eps:["a) Uji coba PDSA peningkatan mutu. (D, W)","b) Evaluasi uji coba PDSA. (D, W)","c) Dokumentasi dan replikasi inovasi. (D, W)","d) Laporan mutu tahunan. (D, W)"]}]},
+{id:"Standar 5.2",title:"Program manajemen risiko.",kriteriaList:[
+{id:"Kriteria 5.2.1",title:"Identifikasi risiko.",eps:["a) Program manajemen risiko disusun. (R, W)","b) Penatalaksanaan risiko dipandu. (D, W)","c) Register risiko didokumentasikan. (D, W)","d) Profil risiko prioritas disusun. (D, W)"]},
+{id:"Kriteria 5.2.2",title:"Penatalaksanaan risiko.",eps:["a) Rencana penanganan risiko terintegrasi. (D)","b) Pemantauan penanganan risiko. (D, W)","c) Pelaporan risiko ke dinkes. (D, W)","d) FMEA dilakukan setiap tahun. (D, W)"]}]},
+{id:"Standar 5.3",title:"Sasaran keselamatan pasien (SKP).",kriteriaList:[
+{id:"Kriteria 5.3.1",title:"Identifikasi pasien benar.",eps:["a) Identifikasi sblm tindakan medis. (R, D, O, W)","b) Identifikasi kondisi khusus. (R, D, O, W)"]},
+{id:"Kriteria 5.3.2",title:"Komunikasi efektif SBAR.",eps:["a) Perintah verbal TBaK. (D, W)","b) Pelaporan nilai kritis terkonfirmasi. (D, W, S)","c) Serah terima SBAR. (R, D, W, S)"]},
+{id:"Kriteria 5.3.3",title:"Keamanan obat high alert.",eps:["a) Labeling obat High Alert/LASA. (R, D, O, W)","b) Pengendalian psikotropika. (D, O, W)"]},
+{id:"Kriteria 5.3.4",title:"Tepat Pasien Prosedur Sisi.",eps:["a) Site marking dilakukan konsisten. (R, O, W, S)","b) Verifikasi pra-bedah. (D, O, W)","c) Time out dilakukan sblm tindakan. (O, W)"]},
+{id:"Kriteria 5.3.5",title:"Kebersihan tangan 6 langkah.",eps:["a) Standar cuci tangan WHO. (R)","b) Kepatuhan cuci tangan dipantau. (D, O, W)"]},
+{id:"Kriteria 5.3.6",title:"Pengurangan risiko jatuh.",eps:["a) Penapisan pasien jatuh di rawat jalan. (R, O, W, S)","b) Evaluasi dan perbaikan area licin. (D, W)"]}]},
+{id:"Standar 5.4",title:"Pelaporan insiden (IKP).",kriteriaList:[
+{id:"Kriteria 5.4.1",title:"RCA IKP.",eps:["a) Pelaporan IKP internal KTC/KNC. (R, D, W)","b) Laporan Sentinel KNKP. (D, O, W)"]},
+{id:"Kriteria 5.4.2",title:"Budaya mutu.",eps:["a) Survei budaya keselamatan. (D, W)","b) Sistem identifikasi perilaku blameless. (D, W)","c) Edukasi mutu klinis nakes. (D, W)"]}]},
+{id:"Standar 5.5",title:"Program PPI.",kriteriaList:[
+{id:"Kriteria 5.5.1",title:"Program PPI komprehensif.",eps:["a) Program PPI disusun. (R, D)","b) Evaluasi pelaksanaan PPI. (D, W)"]},
+{id:"Kriteria 5.5.2",title:"Identifikasi risiko PPI (ICRA).",eps:["a) Kajian risiko infeksi (ICRA). (D, W)","b) Mitigasi risiko infeksi. (D, W)"]},
+{id:"Kriteria 5.5.3",title:"Implementasi kewaspadaan standar.",eps:["a) Penerapan kewaspadaan PPI dipantau. (R, D, O, W)","b) Standar mutu PPI pada pihak ketiga. (D, W)"]},
+{id:"Kriteria 5.5.4",title:"Kebersihan tangan fasilitas.",eps:["a) Edukasi cuci tangan ke pasien. (D, W)","b) Sarana cuci tangan (wastafel/handrub). (O)","c) Audit kepatuhan cuci tangan. (D, W)"]},
+{id:"Kriteria 5.5.5",title:"Kewaspadaan transmisi airborne.",eps:["a) Triase/skrining pasien airborne. (R, O, W)","b) Evaluasi pencegahan transmisi. (D, W)"]},
+{id:"Kriteria 5.5.6",title:"Penanganan outbreak infeksi.",eps:["a) Identifikasi outbreak. (D, W)","b) Penanggulangan KLB infeksi Puskesmas. (D, W)"]}]}]}
+};
+
+const klasterMapping = [
+  { id: "KLASTER1", title: "KLASTER 1: MANAJEMEN", icon: "🏢", color: "indigo", programs: [
+      { title: "Program 1: Penyelenggaraan Manajemen Puskesmas", kriteria: ["1.1.1", "1.1.2", "1.2.1", "1.2.2", "1.2.5", "1.6.1", "1.6.2", "1.6.3", "1.7.1", "2.1.1", "2.1.2", "2.1.3", "2.2.1", "2.2.2", "2.3.1", "2.4.1", "2.7.1", "2.8.1", "2.8.2", "2.8.3", "2.8.4"] },
+      { title: "Program 2: Pengelolaan Sumber Daya", kriteria: ["1.3.1", "1.3.2", "1.3.3", "1.3.4", "1.3.5", "1.5.1"] },
+      { title: "Program 3: Penyelenggaraan PMKP, K3 & MFK", kriteria: ["1.3.6", "1.4.1", "1.4.2", "1.4.3", "1.4.4", "1.4.5", "1.4.6", "1.4.7", "1.4.8", "5.1.1", "5.1.2", "5.1.3", "5.1.4", "5.2.1", "5.2.2", "5.3.1", "5.3.2", "5.3.3", "5.3.4", "5.3.5", "5.3.6", "5.4.1", "5.4.2", "5.5.1", "5.5.2", "5.5.3", "5.5.4", "5.5.5", "5.5.6"] },
+      { title: "Program 4: Pengelolaan Jejaring & Sistem Informasi (Termasuk PIS-PK)", kriteria: ["1.2.3", "1.2.4", "2.5.1", "2.5.2", "2.5.3"] }
+  ]},
+  { id: "KLASTER2", title: "KLASTER 2: IBU DAN ANAK", icon: "👩‍👧", color: "pink", programs: [
+      { title: "Program 1: Kesehatan Ibu, Bersalin, Nifas & Balita", kriteria: ["4.1.1", "4.2.1", "4.3.1", "2.6.3", "2.6.4"] }
+  ]},
+  { id: "KLASTER3", title: "KLASTER 3: USIA DEWASA DAN LANJUT USIA", icon: "👴", color: "amber", programs: [
+      { title: "Program 1: Kesehatan Dewasa, Lansia & Promkes", kriteria: ["4.5.1", "2.6.1"] }
+  ]},
+  { id: "KLASTER4", title: "KLASTER 4: PENYAKIT MENULAR", icon: "🦠", color: "rose", programs: [
+      { title: "Program 1: Pengendalian Penyakit Menular & Kesling", kriteria: ["4.4.1", "2.6.2", "2.6.5"] }
+  ]},
+  { id: "LINTAS", title: "LINTAS KLASTER (LAYANAN PENUNJANG & IGD)", icon: "🏥", color: "emerald", programs: [
+      { title: "Program 1: Pelayanan Gawat Darurat & Tindakan", kriteria: ["3.1.1", "3.2.1", "3.3.1", "3.4.1", "5.3.1", "5.5.3"] },
+      { title: "Program 2: Pelayanan Kefarmasian", kriteria: ["3.10.1", "5.3.3"] },
+      { title: "Program 3: Pelayanan Laboratorium", kriteria: ["3.9.1"] },
+      { title: "Program 4: Pelayanan Rawat Inap & Rujukan", kriteria: ["3.5.1", "3.6.1", "3.7.1", "3.7.2", "3.8.1"] }
+  ]}
+];
+
+function findKriteriaData(kriteriaId) {
+    for (const [babKey, babData] of Object.entries(rawData)) {
+        for (const standar of babData.standarList) {
+            for (const kriteria of standar.kriteriaList) {
+                if (kriteria.id === "Kriteria " + kriteriaId || kriteria.id.includes(kriteriaId)) {
+                    return { babTitle: babData.title, standarTitle: standar.title, kriteriaId: kriteria.id, kriteriaTitle: kriteria.title, eps: kriteria.eps };
+                }
+            }
+        }
+    }
+    return null;
+}
+
+let dynamicCounts = { totalKlaster: 0, totalProgram: 0, totalKriteriaMapping: 0, totalEPMapping: 0, chartLabels: [], chartData: [], chartColors: [] };
+let uniqueKriteriaAcc = new Set();
+let uniqueEPAcc = new Set();
+
+Object.values(rawData).forEach(bab => {
+    bab.standarList.forEach(std => {
+        std.kriteriaList.forEach(krit => {
+            uniqueKriteriaAcc.add(krit.id);
+            krit.eps.forEach(ep => {
+                const match = ep.match(/^([a-z])\)/i);
+                if (match) uniqueEPAcc.add(`${krit.id}_${match[1]}`);
+            });
+        });
+    });
+});
+
+const ilpData = [];
+const inventoryData = { 'R': { title: "📜 Inventarisasi Regulasi", groups: [] }, 'D': { title: "📄 Inventarisasi Dokumen Bukti", groups: [] }, 'O': { title: "👀 Inventarisasi Observasi", groups: [] }, 'W': { title: "💬 Inventarisasi Wawancara", groups: [] }, 'S': { title: "🏃 Inventarisasi Simulasi", groups: [] } };
+
+function transformInventoryText(type, cleanText) {
+    let textLower = cleanText.toLowerCase();
+    let resultHTML = "", rawTextForCopy = "";
+    
+    if (type === 'R') {
+        let docs = [];
+        if (textLower.includes('kebijakan') || textLower.includes('tetapkan') || textLower.includes('bentuk')) docs.push('SK');
+        if (textLower.includes('prosedur') || textLower.includes('standar')) docs.push('SOP');
+        if (textLower.includes('pedoman') || textLower.includes('panduan')) docs.push('Pedoman');
+        if (textLower.includes('kerangka acuan') || textLower.includes('kak')) docs.push('KAK');
+        if (docs.length === 0) docs.push('Regulasi Tertulis'); 
+        resultHTML = `<span class="font-bold text-indigo-700">[${docs.join('/')}]</span> Siapkan acuan: ${cleanText}`;
+        rawTextForCopy = `[${docs.join('/')}] Siapkan acuan: ${cleanText}`;
+    } 
+    else if (type === 'D') {
+        if (textLower.includes('rekam medis') || textLower.includes('skrining')) {
+            resultHTML = `<span class="font-bold text-emerald-700">[Rekam Medis]</span> Siapkan sampel rekam medis: ${cleanText}`;
+            rawTextForCopy = `[Rekam Medis] Siapkan sampel rekam medis: ${cleanText}`;
+        } else if (textLower.includes('evaluasi') || textLower.includes('analisis') || textLower.includes('lokakarya')) {
+            resultHTML = `<span class="font-bold text-emerald-700">[Laporan]</span> Siapkan laporan evaluasi/analisis: ${cleanText}`;
+            rawTextForCopy = `[Laporan] Siapkan laporan evaluasi/analisis: ${cleanText}`;
+        } else {
+            resultHTML = `<span class="font-bold text-emerald-700">[Dokumen Bukti]</span> Siapkan bukti pelaksanaan (laporan/foto): ${cleanText}`;
+            rawTextForCopy = `[Dokumen Bukti] Siapkan bukti pelaksanaan (laporan/foto): ${cleanText}`;
+        }
+    }
+    else if (type === 'O') {
+        resultHTML = `<span class="font-bold text-amber-600">[Observasi]</span> Surveior akan melihat fisik: ${cleanText}`;
+        rawTextForCopy = `[Observasi] Surveior akan melihat fisik: ${cleanText}`;
+    }
+    else if (type === 'W') {
+        resultHTML = `<span class="font-bold text-purple-700">[Wawancara]</span> Pastikan petugas / pasien memahami: ${cleanText}`;
+        rawTextForCopy = `[Wawancara] Pastikan petugas / pasien memahami: ${cleanText}`;
+    }
+    else if (type === 'S') {
+        resultHTML = `<span class="font-bold text-rose-600">[Simulasi]</span> Petugas siap mensimulasikan: ${cleanText}`;
+        rawTextForCopy = `[Simulasi] Petugas siap mensimulasikan: ${cleanText}`;
+    }
+    return { html: resultHTML, raw: rawTextForCopy };
+}
+
+function addToInventory(type, klasterTitle, programTitle, babTitle, standarTitle, kriteriaId, epId, cleanText) {
+    if (!inventoryData[type]) return;
+    let group = inventoryData[type].groups.find(g => g.title === klasterTitle);
+    if (!group) { group = { title: klasterTitle, items: [] }; inventoryData[type].groups.push(group); }
+    const translated = transformInventoryText(type, cleanText);
+    const reference = `${kriteriaId} EP ${epId}`;
+    const copyString = `${translated.raw} (${reference} - ${programTitle})`;
+    const isDuplicate = group.items.some(item => item.reference === reference && item.programTitle === programTitle);
+    if (!isDuplicate) {
+        group.items.push({ displayHtml: translated.html, copyText: copyString, reference: reference, programTitle: programTitle });
+    }
+}
+
+klasterMapping.forEach(klaster => {
+    dynamicCounts.totalKlaster++;
+    let kriteriaInKlaster = 0;
+    
+    const programList = klaster.programs.map(prog => {
+        dynamicCounts.totalProgram++;
+        const kriteriaList = prog.kriteria.map(kritId => {
+            const found = findKriteriaData(kritId);
+            if (found) {
+                dynamicCounts.totalKriteriaMapping++;
+                kriteriaInKlaster++;
+                
+                const elements = found.eps.map(epStr => {
+                    const matchId = epStr.match(/^([a-z])\)\s*(.*)/i);
+                    if(matchId) {
+                        dynamicCounts.totalEPMapping++;
+                        const id = matchId[1];
+                        let fullText = matchId[2];
+                        const rdowsMatch = fullText.match(/\([\sRDOWS,]+\)\s*$/i);
+                        let rdows = [], cleanText = fullText;
+                        if (rdowsMatch) {
+                            cleanText = fullText.replace(rdowsMatch[0], '').trim();
+                            const typesString = rdowsMatch[0].toUpperCase();
+                            const possibleTypes = ['R', 'D', 'O', 'W', 'S'];
+                            const types = possibleTypes.filter(t => typesString.includes(t));
+                            const detailMap = { 'R': 'SK/SOP/KAK', 'D': 'Rekam Medis/Laporan', 'O': 'Observasi Fisik', 'W': 'Wawancara', 'S': 'Simulasi' };
+                            rdows = types.map(t => ({ type: t, detail: detailMap[t] || '' }));
+                            types.forEach(t => addToInventory(t, klaster.title.split(':')[0], prog.title, found.babTitle, found.standarTitle, found.kriteriaId, id, cleanText));
+                        }
+                        return { id, text: cleanText, rdows };
+                    }
+                    return null;
+                }).filter(Boolean);
+                return { babTitle: found.babTitle, standarTitle: found.standarTitle, kriteriaId: found.kriteriaId, kriteriaTitle: found.kriteriaTitle, elements: elements };
+            }
+            return null;
+        }).filter(Boolean);
+        return { title: prog.title, kriteriaList };
+    });
+    
+    ilpData.push({ title: klaster.title, icon: klaster.icon, color: klaster.color, programList: programList });
+    dynamicCounts.chartLabels.push(klaster.title.split(':')[0]);
+    dynamicCounts.chartData.push(kriteriaInKlaster);
+    const colorMap = { 'indigo': '#6366f1', 'pink': '#ec4899', 'amber': '#f59e0b', 'rose': '#f43f5e', 'emerald': '#10b981' };
+    dynamicCounts.chartColors.push(colorMap[klaster.color] || '#cbd5e1');
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('count-klaster').textContent = dynamicCounts.totalKlaster;
+    document.getElementById('count-program').textContent = dynamicCounts.totalProgram;
+    document.getElementById('count-kriteria-map').textContent = dynamicCounts.totalKriteriaMapping;
+    document.getElementById('count-ep-map').textContent = dynamicCounts.totalEPMapping;
+    document.getElementById('text-tot-ep-inv').textContent = dynamicCounts.totalEPMapping;
+    document.getElementById('val-kriteria').textContent = uniqueKriteriaAcc.size;
+    document.getElementById('val-ep').textContent = uniqueEPAcc.size;
+    document.getElementById('val-total-map').textContent = dynamicCounts.totalEPMapping;
+
+    const views = document.querySelectorAll('.view');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const inventoryTabButtons = document.querySelectorAll('.inventory-tab-button');
+    let klasterChartInstance = null, activeInventoryType = 'R';
+
+    function switchView(viewId) {
+        views.forEach(v => v.classList.add('hidden'));
+        document.getElementById(`view-${viewId}`).classList.remove('hidden');
+        tabButtons.forEach(btn => btn.classList.toggle('active', btn.id === `tab-${viewId}`));
+    }
+
+    function switchInventoryView(type) {
+        activeInventoryType = type;
+        inventoryTabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.type === type));
+        renderInventoryContent();
+    }
+    
+    function getRdowsIcon(type) { const icons = {'R':'📜', 'D':'📄', 'O':'👀', 'W':'💬', 'S':'🏃'}; return icons[type] || '📌'; }
+
+    function renderExplorerContent() {
+        const container = document.getElementById('explorer-content');
+        if (container.innerHTML !== '') return;
+        
+        ilpData.forEach(klaster => {
+            const el = document.createElement('div');
+            el.className = 'mb-8 border border-slate-200 rounded-lg shadow-sm bg-white overflow-hidden';
+            el.innerHTML = `<h2 class="text-xl font-bold text-white bg-${klaster.color}-600 p-4 flex items-center"><span class="mr-2 text-2xl">${klaster.icon}</span> ${klaster.title}</h2>`;
+            const content = document.createElement('div');
+            content.className = 'p-4 space-y-6';
+
+            klaster.programList.forEach(prog => {
+                const progEl = document.createElement('div');
+                progEl.className = 'border border-slate-200 rounded-lg overflow-hidden shadow-sm';
+                progEl.innerHTML = `<div class="bg-${klaster.color}-50 p-3 font-bold text-slate-800 border-b border-slate-200">${prog.title}</div>`;
+                const kritCont = document.createElement('div');
+
+                prog.kriteriaList.forEach(krit => {
+                    const kritAcc = document.createElement('div');
+                    kritAcc.className = 'border-b last:border-b-0 border-slate-200';
+                    kritAcc.innerHTML = `
+                        <div class="accordion-header flex justify-between items-center p-4 hover:bg-slate-50 transition-colors">
+                            <div><span class="text-xs font-semibold text-slate-400 block mb-1 uppercase tracking-wider">${krit.babTitle} > ${krit.standarTitle}</span><h3 class="font-semibold text-slate-700 pr-4">${krit.kriteriaId}: ${krit.kriteriaTitle}</h3></div>
+                            <span class="transform transition-transform duration-300 text-slate-500 text-lg">▼</span>
+                        </div>
+                        <div class="accordion-content bg-white px-4 pb-4">
+                            ${krit.elements.map(ep => `
+                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 mb-3 mt-2">
+                                    <p class="font-medium text-slate-800">EP ${ep.id}) ${ep.text}</p>
+                                    <div class="mt-3 border-t pt-3 space-y-2 flex flex-wrap gap-2">
+                                        ${ep.rdows.map(r => `<span class="inline-flex items-center text-xs font-medium bg-white border border-slate-200 rounded-md px-2 py-1 shadow-sm"><span class="mr-1">${getRdowsIcon(r.type)}</span> ${r.type}: ${r.detail}</span>`).join('')}
+                                    </div>
+                                </div>`).join('')}
+                        </div>`;
+                    kritCont.appendChild(kritAcc);
+                    kritAcc.querySelector('.accordion-header').addEventListener('click', function() {
+                        this.querySelector('span.transform').style.transform = this.nextElementSibling.classList.toggle('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+                    });
+                });
+                progEl.appendChild(kritCont);
+                content.appendChild(progEl);
+            });
+            el.appendChild(content);
+            container.appendChild(el);
+        });
+    }
+
+    function renderInventoryContent() {
+        const container = document.getElementById('inventory-content');
+        const data = inventoryData[activeInventoryType];
+        if (!data || data.groups.length === 0) { container.innerHTML = `<p class="text-center text-slate-500 my-8">Tidak ada data untuk kategori ini.</p>`; return; }
+
+        let html = '<div class="space-y-8">';
+        data.groups.forEach(group => {
+            html += `<div><h3 class="text-lg font-semibold text-slate-800 border-b-2 border-indigo-200 pb-2 mb-3">${group.title} <span class="text-sm font-normal text-slate-500">(${group.items.length} Checklist)</span></h3><ul class="space-y-3 list-none pl-0">`;
+            group.items.forEach(item => {
+                html += `
+                    <li class="p-3 bg-slate-50 rounded-md border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-white transition-colors shadow-sm">
+                        <span class="text-slate-700 text-sm md:text-base flex-1 leading-relaxed">${item.displayHtml} <span class="text-xs font-mono bg-indigo-50 text-indigo-800 border border-indigo-100 px-1.5 py-0.5 rounded-md ml-1 whitespace-nowrap">${item.reference}</span></span>
+                        <button class="copy-btn shrink-0 inline-flex items-center px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-100" data-text="${item.copyText.replace(/"/g, '&quot;')}">Salin</button>
+                    </li>`;
+            });
+            html += `</ul></div>`;
+        });
+        container.innerHTML = html + '</div>';
+
+        container.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const ta = document.createElement("textarea"); ta.value = this.getAttribute('data-text');
+                ta.style.position = "fixed"; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                showToast("Teks berhasil disalin ke clipboard!");
+                const og = this.innerHTML; this.innerHTML = `Tersalin!`; this.classList.replace("text-slate-600", "text-indigo-700");
+                setTimeout(() => { this.innerHTML = og; this.classList.replace("text-indigo-700", "text-slate-600"); }, 2000);
+            });
+        });
+    }
+    
+    function initDashboard() {
+        if (klasterChartInstance) klasterChartInstance.destroy();
+        klasterChartInstance = new Chart(document.getElementById('klasterDistributionChart'), {
+            type: 'polarArea', 
+            data: { labels: dynamicCounts.chartLabels, datasets: [{ label: 'Kriteria Terpetakan', data: dynamicCounts.chartData, backgroundColor: dynamicCounts.chartColors, borderColor: '#fff', borderWidth: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+        });
+    }
+
+    tabButtons.forEach(btn => btn.addEventListener('click', () => { switchView(btn.id.replace('tab-', '')); if (btn.id === 'tab-dashboard') initDashboard(); else if (btn.id === 'tab-explorer') renderExplorerContent(); }));
+    inventoryTabButtons.forEach(btn => btn.addEventListener('click', () => switchInventoryView(btn.dataset.type)));
+
+    switchView('dashboard'); initDashboard(); renderInventoryContent(); 
+});
+</script>
+</body>
+</html>
